@@ -3,52 +3,23 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/csv"
 	"fmt"
-	"io"
+	"github.com/delphifeel/pjlab_auth/db"
 	"log"
 	"net/http"
-	"os"
 	"time"
+	"sync"
 )
 
+var mutex sync.RWMutex
+
 func makeToken(username string, password string) string {
-	now := time.Now()
-	year, month, day := now.Date()
-	s := fmt.Sprintf("%s:%s:%d:%d:%d", username, password, year, month, day)
+	now := time.Now().UnixMicro()
+	s := fmt.Sprintf("%v:%v:%v", username, password, now)
+	fmt.Println(s)
 	sum := sha256.Sum256([]byte(s))
 	encoded := base64.StdEncoding.EncodeToString(sum[:])
 	return encoded
-}
-
-func testCreds(username string, password string) bool {
-	f, err := os.Open("users.csv")
-	if err != nil {
-		panic(err)
-	}
-
-	passwordB64 := base64.StdEncoding.EncodeToString([]byte(password))
-	csvReader := csv.NewReader(f)
-	csvReader.Comma = ';'
-
-	for {
-		record, err := csvReader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		expectedUsername := record[0]
-		expectedPasswordB64 := record[1]
-
-		if expectedUsername == username && expectedPasswordB64 == passwordB64 {
-			return true
-		}
-	}
-
-	return false
 }
 
 func loginHandler(w http.ResponseWriter, req *http.Request) {
@@ -65,16 +36,26 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if ok := testCreds(username, password); !ok {
+	if ok := db.TestCreds(&mutex, username, password); !ok {
 		http.Error(w, "Wrong creds", 400)
 		return
 	}
 
 	token := makeToken(username, password)
 	fmt.Fprintf(w, token)
+
+	mutex.Lock()
+	db.ChangeUserToken(username, token)
+	mutex.Unlock()
+}
+
+func initLogger() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 }
 
 func main() {
+	initLogger()
+
 	http.HandleFunc("/login", loginHandler)
 
 	log.Println("pjlab_auth service started.")
