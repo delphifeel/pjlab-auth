@@ -18,7 +18,7 @@ func makeToken(username string, password string) string {
 	now := time.Now().UnixMicro()
 	s := fmt.Sprintf("%v:%v:%v", username, password, now)
 	sum := sha256.Sum256([]byte(s))
-	encoded := base64.StdEncoding.EncodeToString(sum[:])
+	encoded := base64.URLEncoding.EncodeToString(sum[:])
 	return encoded
 }
 

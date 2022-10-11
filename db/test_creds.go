@@ -17,7 +17,7 @@ func TestCreds(mutex *sync.RWMutex, username string, password string) bool {
 	usersReader, closeFile := newDBReader(usersFile)
 	defer closeFile()
 	sum := sha256.Sum256([]byte(password))
-	passwordB64 := base64.StdEncoding.EncodeToString(sum[:])
+	passwordB64 := base64.URLEncoding.EncodeToString(sum[:])
 
 	for {
 		record, err := usersReader.Read()
@@ -31,8 +31,8 @@ func TestCreds(mutex *sync.RWMutex, username string, password string) bool {
 		expectedUsername := record[0]
 		expectedPasswordB64 := record[1]
 
-		if expectedUsername == username && expectedPasswordB64 == passwordB64 {
-			return true
+		if expectedUsername == username {
+			return expectedPasswordB64 == passwordB64
 		}
 	}
 

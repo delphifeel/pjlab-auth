@@ -53,8 +53,8 @@ func TestUserToken(username string, tokenB64 string) bool {
 		expectedUsername := record[0]
 		expectedToken := record[1]
 
-		if expectedUsername == username && tokenB64 == expectedToken {
-			return true
+		if expectedUsername == username {
+			return tokenB64 == expectedToken
 		}
 	}
 
