@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"crypto/sha256"
 )
 
 const usersFile = "users.csv"
@@ -15,7 +16,8 @@ func TestCreds(mutex *sync.RWMutex, username string, password string) bool {
 
 	usersReader, closeFile := newDBReader(usersFile)
 	defer closeFile()
-	passwordB64 := base64.StdEncoding.EncodeToString([]byte(password))
+	sum := sha256.Sum256([]byte(password))
+	passwordB64 := base64.StdEncoding.EncodeToString(sum[:])
 
 	for {
 		record, err := usersReader.Read()
